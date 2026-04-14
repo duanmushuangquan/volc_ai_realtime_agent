@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .chat-section {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            background: white;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: 20%;
+        }
+        
+        .message.assistant {
+            background: #e8e8e8;
+            color: #333;
+            margin-right: 20%;
+        }
+        
+        .message .role {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .message .content {
+            line-height: 1.6;
+        }
+        
+        .message .timestamp {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-container input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .input-container input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .input-container button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .input-container button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .input-container button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tools-list {
+            list-style: none;
+        }
+        
+        .tools-list li {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .tools-list li:hover {
+            background: #e8e8e8;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        
+        .status-dot.online {
+            background: #4caf50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 10px;
+        }
+        
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #999;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Robot Control System</h1>
+            <p>火山引擎AI音视频互动方案 - 智能机器人控制系统</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="chat-section">
+                <div class="chat-container" id="chatContainer">
+                    <div class="message assistant">
+                        <div class="role">🤖 助手</div>
+                        <div class="content">
+                            您好！我是机器人控制助手。我可以帮助您：<br><br>
+                            • 进行自然语言对话<br>
+                            • 搜索网络信息<br>
+                            • 查询知识库<br>
+                            • 执行系统命令<br>
+                            • 控制机器人硬件<br><br>
+                            请告诉我您的需求！
+                        </div>
+                        <div class="timestamp" id="welcomeTime"></div>
+                    </div>
+                </div>
+                
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="输入您的问题或指令..."
+                        onkeypress="handleKeyPress(event)"
+                    >
+                    <button id="sendBtn" onclick="sendMessage()">
+                        发送
+                    </button>
+                </div>
+            </div>
+            
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>📊 系统状态</h3>
+                    <div class="status-indicator">
+                        <div class="status-dot online" id="statusDot"></div>
+                        <span id="statusText">在线</span>
+                    </div>
+                    <div class="stats" style="margin-top: 15px;">
+                        <div class="stat-item">
+                            <div class="stat-value" id="messageCount">0</div>
+                            <div class="stat-label">消息数</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="toolCount">6</div>
+                            <div class="stat-label">可用工具</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>🔧 可用工具</h3>
+                    <ul class="tools-list">
+                        <li onclick="quickAction('搜索最新新闻')">🔍 网页搜索</li>
+                        <li onclick="quickAction('查询机器人使用说明')">📚 知识库检索</li>
+                        <li onclick="quickAction('当前时间')">🕐 时间查询</li>
+                        <li onclick="quickAction('123+456')">🧮 数学计算</li>
+                        <li onclick="quickAction('你好')">💬 闲聊对话</li>
+                    </ul>
+                </div>
+                
+                <div class="panel">
+                    <h3>🤖 硬件控制</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button onclick="hardwareControl('move_forward')" style="padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">⬆️ 前进</button>
+                        <button onclick="hardwareControl('move_backward')" style="padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">⬇️ 后退</button>
+                        <button onclick="hardwareControl('turn_left')" style="padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">⬅️ 左转</button>
+                        <button onclick="hardwareControl('turn_right')" style="padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer;">➡️ 右转</button>
+                        <button onclick="hardwareControl('stop')" style="padding: 10px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer; grid-column: span 2;">⏹️ 停止</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let messageCount = 0;
+        let ws = null;
+        const conversationId = 'web_' + Date.now();
+        
+        // 显示欢迎时间
+        document.getElementById('welcomeTime').textContent = new Date().toLocaleTimeString();
+        
+        // WebSocket连接
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/chat/${conversationId}`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                console.log('WebSocket connected');
+                document.getElementById('statusDot').classList.add('online');
+                document.getElementById('statusText').textContent = '在线';
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                document.getElementById('statusDot').classList.remove('online');
+                document.getElementById('statusText').textContent = '连接错误';
+            };
+            
+            ws.onclose = function() {
+                console.log('WebSocket disconnected');
+                document.getElementById('statusDot').classList.remove('online');
+                document.getElementById('statusText').textContent = '离线';
+                // 尝试重新连接
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        // 处理WebSocket消息
+        function handleWebSocketMessage(data) {
+            if (data.type === 'start') {
+                // 开始接收消息
+                addLoadingMessage();
+            } else if (data.type === 'chunk') {
+                // 更新流式内容
+                updateLoadingMessage(data.data);
+            } else if (data.type === 'done') {
+                // 消息完成
+                finalizeLoadingMessage(data.data);
+            } else if (data.type === 'response') {
+                // 非流式响应
+                if (data.data.success) {
+                    addMessage('assistant', data.data.response);
+                }
+            }
+        }
+        
+        // 添加消息到聊天容器
+        function addMessage(role, content, timestamp = null) {
+            const container = document.getElementById('chatContainer');
+            const time = timestamp || new Date().toLocaleTimeString();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = `
+                <div class="role">${role === 'user' ? '👤 您' : '🤖 助手'}</div>
+                <div class="content">${content.replace(/\n/g, '<br>')}</div>
+                <div class="timestamp">${time}</div>
+            `;
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            messageCount++;
+            document.getElementById('messageCount').textContent = messageCount;
+        }
+        
+        // 添加加载中的消息
+        function addLoadingMessage() {
+            const container = document.getElementById('chatContainer');
+            
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'message assistant';
+            loadingDiv.id = 'loadingMessage';
+            loadingDiv.innerHTML = `
+                <div class="role">🤖 助手</div>
+                <div class="content">
+                    <div class="typing-indicator">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            
+            container.appendChild(loadingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // 更新加载中的消息
+        function updateLoadingMessage(chunk) {
+            const loadingDiv = document.getElementById('loadingMessage');
+            if (loadingDiv) {
+                const contentDiv = loadingDiv.querySelector('.content');
+                contentDiv.innerHTML = contentDiv.textContent + chunk;
+            }
+        }
+        
+        // 完成加载消息
+        function finalizeLoadingMessage(finalContent) {
+            const loadingDiv = document.getElementById('loadingMessage');
+            if (loadingDiv) {
+                loadingDiv.remove();
+                addMessage('assistant', finalContent);
+            }
+        }
+        
+        // 发送消息
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // 清空输入框
+            input.value = '';
+            
+            // 添加用户消息
+            addMessage('user', message);
+            
+            // 禁用发送按钮
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('sendBtn').innerHTML = '<span class="loading"></span>';
+            
+            // 通过WebSocket发送
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    message: message,
+                    conversation_id: conversationId,
+                    stream: true
+                }));
+            } else {
+                // WebSocket未连接，使用HTTP
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: conversationId,
+                        stream: false
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addMessage('assistant', data.response);
+                    } else {
+                        addMessage('assistant', '抱歉，处理您的请求时出现错误。');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addMessage('assistant', '网络错误，请稍后重试。');
+                })
+                .finally(() => {
+                    // 恢复发送按钮
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('sendBtn').textContent = '发送';
+                });
+            }
+            
+            // WebSocket消息会在onmessage中处理
+            setTimeout(() => {
+                document.getElementById('sendBtn').disabled = false;
+                document.getElementById('sendBtn').textContent = '发送';
+            }, 1000);
+        }
+        
+        // 快捷操作
+        function quickAction(message) {
+            document.getElementById('messageInput').value = message;
+            sendMessage();
+        }
+        
+        // 硬件控制
+        function hardwareControl(action) {
+            fetch('/api/hardware/control', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: action,
+                    parameter: 1.0
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addMessage('assistant', `✅ ${data.result}`);
+                } else {
+                    addMessage('assistant', '⚠️ 硬件控制失败：' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Hardware control error:', error);
+                addMessage('assistant', '⚠️ 硬件控制失败，请检查硬件连接。');
+            });
+        }
+        
+        // 回车发送
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        
+        // 初始化WebSocket连接
+        connectWebSocket();
+        
+        // 检查API健康状态
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('API Health:', data);
+            })
+            .catch(error => {
+                console.error('Health check failed:', error);
+            });
+        
+        // 获取工具列表
+        fetch('/api/tools')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('toolCount').textContent = data.count;
+                }
+            })
+            .catch(error => {
+                console.error('Failed to load tools:', error);
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+# Robot Control System Docker Compose
+version: '3.8'
+
+services:
+  robot-control:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: robot-control-system
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # 火山引擎配置
+      - VOLC_APP_ID=${VOLC_APP_ID}
+      - VOLC_TOKEN=${VOLC_TOKEN}
+      - COZE_API_KEY=${COZE_API_KEY}
+      - COZE_SPACE_ID=${COZE_SPACE_ID}
+      
+      # RTC配置
+      - RTC_APP_ID=${RTC_APP_ID}
+      - RTC_TOKEN=${RTC_TOKEN}
+      
+      # 应用配置
+      - APP_DEBUG=false
+      - LOG_LEVEL=INFO
+    volumes:
+      # 持久化数据
+      - robot-data:/tmp/robot_control
+      - vector-db:/tmp/vector_db
+      - conversations-db:/tmp/conversations
+      
+      # 设备映射（机器人硬件）
+      - /dev:/dev
+    devices:
+      # 串口设备
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      # CAN总线
+      - /dev/can0:/dev/can0
+    privileged: true
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  robot-data:
+  vector-db:
+  conversations-db:
