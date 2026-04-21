@@ -7,17 +7,21 @@ Cloud Build Script - 云电脑端编译脚本
 2. 配置 CMake
 3. 编译项目
 4. 运行测试
-5. Webhook 服务（可选）
+5. 轮询模式（检查 GitHub 新提交并自动构建）
+6. Webhook 服务（可选，已废弃）
 
 用法（在云电脑上运行）：
     # 直接编译
     python3 scripts/cloud_build.py
 
-    # 启动 Webhook 服务（端口 8000）
-    python3 scripts/cloud_build.py --webhook --port 8000
+    # 轮询模式（推荐，定时检查 GitHub）
+    python3 scripts/cloud_build.py --poll --github-repo duanmushuangquan/volc_ai_realtime_agent
 
-    # 带 Secret 验证的 Webhook
-    python3 scripts/cloud_build.py --webhook --port 8000 --secret your-github-webhook-secret
+    # 带轮询间隔
+    python3 scripts/cloud_build.py --poll --interval 60  # 每 60 秒检查一次
+
+    # Webhook 服务（已废弃，需要公网可达）
+    python3 scripts/cloud_build.py --webhook --port 8000
 """
 
 import argparse
@@ -173,9 +177,16 @@ def build(project_dir: Path, build_dir: Path):
 def main():
     parser = argparse.ArgumentParser(description="云电脑编译脚本")
     parser.add_argument("--project", default="volc_ai_realtime_agent", help="项目名称")
-    parser.add_argument("--webhook", action="store_true", help="启用 Webhook 服务")
+    parser.add_argument("--webhook", action="store_true", help="启用 Webhook 服务（已废弃，推荐使用 --poll）")
     parser.add_argument("--port", type=int, default=8000, help="Webhook 端口（默认 8000）")
     parser.add_argument("--secret", default="", help="GitHub Webhook Secret（用于验证）")
+    
+    # 轮询模式参数
+    parser.add_argument("--poll", action="store_true", help="启动轮询模式（推荐：定时检查 GitHub）")
+    parser.add_argument("--github-repo", type=str, default="duanmushuangquan/volc_ai_realtime_agent",
+                        help="GitHub 仓库 (owner/repo)")
+    parser.add_argument("--interval", type=int, default=60, help="轮询间隔（秒，默认 60）")
+    
     args = parser.parse_args()
 
     logger.info("=" * 50)
@@ -185,13 +196,27 @@ def main():
 
     project_dir = PROJECT_DIR / args.project
     build_dir = project_dir / "build"
-
+    
+    # 轮询模式
+    if args.poll:
+        poll_mode(
+            repo=args.github_repo,
+            interval=args.interval,
+            project_dir=project_dir,
+            build_dir=build_dir
+        )
+        return
+    
+    # Webhook 模式（已废弃，因为云电脑端口无法从公网访问）
     if args.webhook:
-        # 启动 Webhook 服务
+        logger.warning("⚠️ Webhook 模式已废弃：云电脑端口无法从公网访问")
+        logger.warning("⚠️ 推荐使用轮询模式: python3 scripts/cloud_build.py --poll")
+        logger.info("")
         start_webhook_server(args.port, args.secret, project_dir, build_dir)
-    else:
-        # 直接执行构建
-        build(project_dir, build_dir)
+        return
+
+    # 直接执行构建
+    build(project_dir, build_dir)
 
 
 def verify_github_signature(payload: bytes, signature: str, secret: str) -> bool:
@@ -321,6 +346,77 @@ def start_webhook_server(port: int = 8000, secret: str = "", project_dir: Path =
         server.serve_forever()
     except KeyboardInterrupt:
         logger.info("\nWebhook 服务停止")
+
+
+def get_github_latest_commit(repo: str) -> str:
+    """获取 GitHub 最新的 commit SHA"""
+    import urllib.request
+    import urllib.error
+    
+    url = f"https://api.github.com/repos/{repo}/git/refs/heads/main"
+    try:
+        req = urllib.request.Request(url)
+        req.add_header("Accept", "application/vnd.github.v3+json")
+        req.add_header("User-Agent", "CloudBuildScript/1.0")
+        
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+            return data.get("object", {}).get("sha", "")
+    except urllib.error.URLError as e:
+        logger.warning(f"无法获取 GitHub 最新提交: {e}")
+        return ""
+
+
+def poll_mode(repo: str, interval: int = 60, project_dir: Path = None, build_dir: Path = None):
+    """轮询模式：定时检查 GitHub 并自动构建"""
+    if project_dir is None:
+        project_dir = PROJECT_DIR / "volc_ai_realtime_agent"
+    if build_dir is None:
+        build_dir = project_dir / "build"
+    
+    last_sha = ""
+    
+    logger.info("=" * 50)
+    logger.info("Cloud Build 轮询模式启动")
+    logger.info(f"  仓库: {repo}")
+    logger.info(f"  检查间隔: {interval} 秒")
+    logger.info(f"  项目目录: {project_dir}")
+    logger.info("=" * 50)
+    logger.info("按 Ctrl+C 停止")
+    logger.info("")
+    
+    while True:
+        try:
+            current_sha = get_github_latest_commit(repo)
+            
+            if not current_sha:
+                logger.warning(f"[{time.strftime('%H:%M:%S')}] 无法获取 GitHub 状态，等待 {interval}s...")
+                time.sleep(interval)
+                continue
+            
+            if current_sha != last_sha:
+                if last_sha == "":
+                    logger.info(f"[{time.strftime('%H:%M:%S')}] 初始 SHA: {current_sha[:7]}")
+                else:
+                    logger.info(f"[{time.strftime('%H:%M:%S')}] 检测到新提交: {current_sha[:7]}")
+                    logger.info("=" * 50)
+                    # 执行构建
+                    build(project_dir, build_dir)
+                    logger.info("=" * 50)
+                    logger.info(f"构建完成，等待 {interval}s...")
+                
+                last_sha = current_sha
+            else:
+                logger.info(f"[{time.strftime('%H:%M:%S')}] 无新提交 (SHA: {current_sha[:7]})")
+            
+            time.sleep(interval)
+            
+        except KeyboardInterrupt:
+            logger.info("\n轮询模式停止")
+            break
+        except Exception as e:
+            logger.exception(f"轮询异常: {e}")
+            time.sleep(interval)
 
 
 if __name__ == "__main__":
