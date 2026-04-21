@@ -174,15 +174,17 @@ const Meeting: React.FC<Record<string, unknown>> = () => {
       if (!roomId || !userId || !rtc.current) return;
       // rtc.current.bindEngineEvents();
 
-      let token = null;
+      let token: string | null = null;
       config.tokens.forEach((item) => {
         if (item.userId === userId) {
           token = item.token;
         }
       });
 
+      console.log('[RTC] RtcClient.join called', { roomId, userId, token: token ? '***' : 'null' });
+      
       rtc.current
-        .join((token as any) || null, roomId, userId)
+        .join(token, roomId, userId)
         .then(() => {
           console.log('[RTC] joinRoom success', { roomId, userId, token: token ? '***' : 'null' });
           rtc?.current?.createLocalStream(userId, (res: any) => {
