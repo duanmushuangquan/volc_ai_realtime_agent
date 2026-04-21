@@ -1,90 +1,54 @@
-node_modules
-dist
-.DS_Store
-*.swp
-.git/*
-__pycache__/
-*.pyc
-.venv/*
-*.o
-*.a
-/vendor
-*.egg-info/
-/.env
-.env
-
-# JS/TS bundlers & build outputs
-.next
-.nuxt
-.turbo
-.vercel
-.parcel-cache
-.cache
-coverage
-storybook-static
-
-# Package manager artifacts
+# Dependencies
+node_modules/
 pnpm-lock.yaml
 package-lock.json
-yarn.lock
-.pnp*
-.npm
 
-# Python tooling
+# Build
+build/
+dist/
+*.o
+*.so
+*.a
+*.dylib
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.tox/
+*.egg-info/
+.eggs/
+dist/
+*.egg
 
-# Go tooling
-bin/
-*.test
-
-# Editor / IDE
+# IDE
 .vscode/
 .idea/
-*.iml
+*.swp
+*.swo
+*~
 
-# OS / misc
+# OS
+.DS_Store
 Thumbs.db
-ehthumbs.db
 
 # Logs
-output.log
 *.log
-*.log.*
 logs/
 
-# 视频文件
-*.mp4
-*.avi
-*.mov
-*.wmv
-*.flv
-*.mkv
-*.webm
-*.m4v
-*.mpeg
-*.mpg
-*.3gp
-*.f4v
-*.rmvb
-*.vob
+# Vendor SDKs (keep this but ignore contents)
+vendor/
 
-# 归档文件
-*.iso
-*.dmg
-*.rar
-*.zip
-*.gz
+# Temporary files
+*.tmp
+*.bak
+.cache/
 
-# 文档类也默认加入
-*.pdf
-*.docx
-*.doc
-*.xlsx
-*.xls
-*.ppt
-*.pptx
-*.xlsx
-*.csv
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+*.lcov

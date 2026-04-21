@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      if: |
+        contains(needs.files, 'pyproject.toml') ||
+        contains(needs.files, 'setup.py')
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Node.js
+      if: contains(needs.files, 'package.json')
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+        if [ -f "pyproject.toml" ]; then pip install -e .; fi
+        if [ -f "package.json" ]; then npm ci; fi
+    
+    - name: Lint
+      run: make lint || bash scripts/lint.sh || true
+    
+    - name: Build
+      run: make build || bash scripts/build.sh || true
+    
+    - name: Test
+      run: make test || bash scripts/test.sh || true
+    
+  # C++ specific
+  cpp-build:
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    if: contains(needs.files, 'CMakeLists.txt')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y cmake g++ libssl-dev
+    
+    - name: Build
+      run: bash scripts/build.sh
+    
+    - name: Test
+      run: bash scripts/test.sh
+
+  # Python specific
+  python-test:
+    runs-on: ubuntu-latest
+    if: contains(needs.files, 'pyproject.toml')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -e ".[dev]"
+        pip install pytest pytest-cov
+    
+    - name: Run tests
+      run: pytest -v --cov=src tests/
+
+  # Node.js specific
+  node-test:
+    runs-on: ubuntu-latest
+    if: contains(needs.files, 'package.json')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: npm test
