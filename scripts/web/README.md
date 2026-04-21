@@ -4,12 +4,32 @@
 
 ```
 scripts/web/
-├── update_config.sh  # 更新 Web SDK 配置（生成 Token）
+├── cli.sh           # 交互式 CLI 入口（推荐使用）
+├── update_config.sh # 更新 Web SDK 配置（生成 Token）
 ├── start.sh         # 启动开发服务器
+├── stop.sh          # 停止 Web 服务
+├── kill.sh          # 强制清理后台进程
 └── README.md        # 本文件
 ```
 
-## 使用流程
+## 快速开始
+
+### 交互式 CLI（推荐）
+
+```bash
+bash scripts/web/cli.sh
+```
+
+菜单选项：
+1. 更新配置 - 生成 Token 并更新 SDK
+2. 启动服务 - 启动 Web 开发服务器
+3. 安装依赖 - 安装 npm/pnpm 依赖
+4. 构建项目 - 构建生产版本
+5. 停止服务 - 优雅停止 Web 服务
+6. 清理进程 - 强制清理后台 node 进程
+0. 退出
+
+## 单独使用脚本
 
 ### 1. 配置 Token
 
@@ -40,22 +60,24 @@ expire = 604800  # 7 天（最大支持 30 天 = 2592000 秒）
 bash scripts/web/update_config.sh
 ```
 
-脚本会自动：
-- 读取 `config/token.conf`
-- 调用 Python 工具生成 Token
-- 更新 `src/web/volc_web_sdk/src/config.ts`
-
 ### 3. 启动开发服务器
 
 ```bash
 bash scripts/web/start.sh
 ```
 
-或者手动启动：
+### 4. 停止服务
 
 ```bash
-cd src/web/volc_web_sdk
-pnpm start
+bash scripts/web/stop.sh
+```
+
+### 5. 清理进程
+
+如果服务无法正常停止，强制清理：
+
+```bash
+bash scripts/web/kill.sh
 ```
 
 ## Token 有效期
@@ -72,3 +94,4 @@ pnpm start
 - `config/token.conf` 包含敏感信息，**不要提交到 Git**
 - `.gitignore` 已配置忽略此文件
 - Token 过期后需要重新生成
+- 服务运行在端口 5000
