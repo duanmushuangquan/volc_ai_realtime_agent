@@ -61,3 +61,12 @@ config/cloud.env
 # Test coverage
 coverage/
 *.lcov
+
+# CI/CD (optional - create .github/workflows manually on GitHub)
+# .github/
+
+# SSH keys
+.ssh/
+
+# Cloud config
+config/*.env
