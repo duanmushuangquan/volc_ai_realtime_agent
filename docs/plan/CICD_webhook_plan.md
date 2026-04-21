@@ -24,7 +24,7 @@
 
 ## 子任务清单
 
-### [x] Task 1: 创建 GitHub Actions 主流程 (已完成，待配置)
+### [x] Task 1: 创建 GitHub Actions 主流程 ✅
 
 **目标**: 创建 `.github/workflows/ci.yml`，实现多语言编译
 
@@ -34,12 +34,12 @@
    - 触发条件：push/PR 到 main
    - 多语言支持：C++ (cmake) / Python (pytest) / TypeScript (pnpm)
    - 步骤：checkout → 安装依赖 → 编译 → 测试 → lint
-3. ⚠️ Token 缺少 workflow scope，需手动配置
+3. ✅ Token 问题已解决，重新生成了有 workflow 权限的 token
 
 **验收标准**:
 - [x] `ci.yml` 文件已创建
-- [ ] GitHub Actions 页面能看到 workflow  ⚠️ 需要重新配置
-- [ ] push 代码后自动触发构建
+- [x] GitHub Actions 页面能看到 workflow
+- [ ] push 代码后自动触发构建 (需要首次 push 触发)
 
 **文件改动**:
 - `.github/workflows/ci.yml` (已创建，内容如下)
@@ -50,7 +50,6 @@
 # 并行构建 + 自动通知
 ```
 
-**⚠️ Token 问题**: 当前 Token 缺少 `workflow` scope，需要重新生成或手动创建
 
 ---
 
