@@ -1,9 +1,0 @@
-{
-	"dependencies": {
-		"coze-coding-dev-sdk": "^0.7.20"
-	},
-	"devDependencies": {
-		"ts-node": "^10.9.2",
-		"typescript": "^6.0.3"
-	}
-}
