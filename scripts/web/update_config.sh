@@ -87,12 +87,13 @@ update_sdk_config() {
     
     echo -e "${GREEN}正在更新 SDK 配置...${NC}"
     
-    # 使用 sed 替换配置
-    sed -i "s/const appId = \".*\"/const appId = \"$APP_ID\"/" "$SDK_CONFIG_FILE"
-    sed -i "s/const appKey = \".*\"/const appKey = \"$APP_KEY\"/" "$SDK_CONFIG_FILE"
-    sed -i "s/const roomId = \".*\"/const roomId = \"$ROOM_ID\"/" "$SDK_CONFIG_FILE"
-    sed -i "s/const userId = \".*\"/const userId = \"$user_id\"/" "$SDK_CONFIG_FILE")
-    sed -i "s|const token = \".*\"|const token = \"$token\"|" "$SDK_CONFIG_FILE"
+    # 更新基础配置
+    sed -i "s/appId: 'yourAppId'/appId: '$APP_ID'/" "$SDK_CONFIG_FILE"
+    sed -i "s/roomId: 'yourRoomId'/roomId: '$ROOM_ID'/" "$SDK_CONFIG_FILE"
+    
+    # 更新第一个用户的配置
+    sed -i "s/userId: 'yourUserId1'/userId: '$user_id'/" "$SDK_CONFIG_FILE"
+    sed -i "s/token: 'yourToken1'/token: '$token'/" "$SDK_CONFIG_FILE"
     
     echo -e "${GREEN}SDK 配置已更新！${NC}"
 }
