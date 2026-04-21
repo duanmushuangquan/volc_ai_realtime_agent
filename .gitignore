@@ -70,3 +70,13 @@ coverage/
 
 # Cloud config
 config/*.env
+
+# Web Demo
+src/web/node_modules/
+src/web/build/
+src/web/.env
+src/web/.env.local
+src/web/.env.production
+
+# 配置文件（敏感）
+config/volc.json

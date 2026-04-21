@@ -1,0 +1,6 @@
+{
+  "appId": "YOUR_APP_ID",
+  "token": "YOUR_TOKEN",
+  "serverUrl": "wss://rtc.volcengine.com",
+  "region": "CN"
+}
