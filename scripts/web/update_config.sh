@@ -1,6 +1,5 @@
 #!/bin/bash
-# 更新 Web SDK 配置脚本
-# 从 config/token.conf 读取配置，生成 Token 并更新 src/web/volc_web_sdk/src/config.ts
+# update_config.sh - 更新 Web SDK 配置
 
 set -e
 
@@ -10,51 +9,44 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# 配置路径
-CONFIG_FILE="config/token.conf"
-CONFIG_TEMPLATE="config/token.conf.example"
-SDK_CONFIG_FILE="src/web/volc_web_sdk/src/config.ts"
-TOKEN_GENERATOR="src/web/tools/token/token_generator.py"
+# 路径配置
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CONFIG_FILE="$PROJECT_ROOT/config/token.conf"
+SDK_CONFIG_FILE="$PROJECT_ROOT/src/web/volc_web_sdk/src/config.ts"
+TOKEN_GENERATOR="$PROJECT_ROOT/src/web/tools/token/token_generator.py"
 
 # 检查配置文件
 check_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
-        echo -e "${YELLOW}配置文件 $CONFIG_FILE 不存在，正在从模板创建...${NC}"
-        if [ -f "$CONFIG_TEMPLATE" ]; then
-            cp "$CONFIG_TEMPLATE" "$CONFIG_FILE"
-            echo -e "${YELLOW}请编辑 $CONFIG_FILE 填写正确的配置${NC}"
-            exit 1
-        else
-            echo -e "${RED}错误：配置文件模板 $CONFIG_TEMPLATE 也不存在${NC}"
-            exit 1
-        fi
+        echo -e "${RED}错误：配置文件 $CONFIG_FILE 不存在${NC}"
+        echo "请先复制并编辑配置文件："
+        echo "  cp config/token.conf.example config/token.conf"
+        echo "  vim config/token.conf"
+        exit 1
     fi
 }
 
-# 解析 INI 格式配置文件
+# 解析 INI 文件
 parse_ini() {
-    local section="$1"
-    local key="$2"
-    local file="$3"
+    local file="$1"
+    local section="$2"
+    local key="$3"
     
-    # 使用 awk 解析 INI 文件
-    awk -F ' = ' -v section="$section" -v key="$key" '
+    awk -F ' = ' -v section="[$section]" -v key="$key" '
         BEGIN { in_section = 0 }
-        /^\[/ { in_section = ($0 == "[" section "]") ? 1 : 0 }
+        /^\[/ { in_section = ($0 == section) ? 1 : 0 }
         in_section && $1 == key { gsub(/^[ \t]+|[ \t]+$/, "", $2); gsub(/^"|"$/, "", $2); print $2; exit }
     ' "$file"
 }
 
 # 读取配置
 read_config() {
-    APP_ID=$(parse_ini "volc" "app_id" "$CONFIG_FILE")
-    APP_KEY=$(parse_ini "volc" "app_key" "$CONFIG_FILE")
-    ROOM_ID=$(parse_ini "volc" "room_id" "$CONFIG_FILE")
-    EXPIRE=$(parse_ini "options" "expire" "$CONFIG_FILE")
-    USER_IDS=$(parse_ini "users" "user_ids" "$CONFIG_FILE")
-    
-    # 解析用户数组
-    USER_IDS=$(echo "$USER_IDS" | sed 's/[][]//g' | tr ',' '\n' | tr -d ' "')
+    APP_ID=$(parse_ini "$CONFIG_FILE" "volc" "app_id")
+    APP_KEY=$(parse_ini "$CONFIG_FILE" "volc" "app_key")
+    ROOM_ID=$(parse_ini "$CONFIG_FILE" "volc" "room_id")
+    EXPIRE=$(parse_ini "$CONFIG_FILE" "options" "expire")
+    USER_IDS_RAW=$(parse_ini "$CONFIG_FILE" "users" "user_ids")
     
     if [ -z "$APP_ID" ] || [ -z "$APP_KEY" ]; then
         echo -e "${RED}错误：配置文件缺少必要的 app_id 或 app_key${NC}"
@@ -64,38 +56,92 @@ read_config() {
     # 默认值
     EXPIRE=${EXPIRE:-604800}
     ROOM_ID=${ROOM_ID:-test_room}
-    USER_IDS=${USER_IDS:-user_001}
 }
 
 # 生成 Token
 generate_token() {
     local user_id="$1"
-    echo -e "${GREEN}正在为用户 $user_id 生成 Token...${NC}"
     
-    python3 "$TOKEN_GENERATOR" \
+    TOKEN=$(python3 "$TOKEN_GENERATOR" \
         --app-id "$APP_ID" \
         --app-key "$APP_KEY" \
         --room-id "$ROOM_ID" \
         --user-id "$user_id" \
-        --expire "$EXPIRE"
+        --expire "$EXPIRE" 2>/dev/null | grep "^Token:" | cut -d: -f2 | tr -d ' ')
+    
+    if [ -z "$TOKEN" ]; then
+        echo -e "${RED}错误：Token 生成失败 for user: $user_id${NC}"
+        exit 1
+    fi
 }
 
-# 更新 Web SDK 配置
-update_sdk_config() {
-    local user_id="$1"
-    local token="$2"
+# 重写整个 config.ts
+rewrite_config() {
+    echo -e "${GREEN}正在重写 SDK 配置...${NC}"
     
-    echo -e "${GREEN}正在更新 SDK 配置...${NC}"
+    # 解析用户列表
+    USER_LIST=$(echo "$USER_IDS_RAW" | sed 's/[][]//g' | tr ',' '\n' | tr -d ' "')
+    USER_COUNT=$(echo "$USER_LIST" | wc -l)
     
-    # 更新基础配置
-    sed -i "s/appId: 'yourAppId'/appId: '$APP_ID'/" "$SDK_CONFIG_FILE"
-    sed -i "s/roomId: 'yourRoomId'/roomId: '$ROOM_ID'/" "$SDK_CONFIG_FILE"
+    # 创建临时文件
+    local tmp_file=$(mktemp)
     
-    # 更新第一个用户的配置
-    sed -i "s/userId: 'yourUserId1'/userId: '$user_id'/" "$SDK_CONFIG_FILE"
-    sed -i "s/token: 'yourToken1'/token: '$token'/" "$SDK_CONFIG_FILE"
+    # 写入文件头
+    cat > "$tmp_file" << 'HEADER'
+/**
+ * Copyright 2024 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
+ * SPDX-license-identifier: BSD-3-Clause
+ */
+
+/*
+ * On initiation. `engine` is not attached to any project or room for any specific user.
+ */
+
+const config = {
+  appId: 'APP_ID_PLACEHOLDER',
+  roomId: 'ROOM_ID_PLACEHOLDER',
+  tokens: [
+HEADER
+
+    # 添加用户 tokens
+    local count=0
+    while IFS= read -r user_id; do
+        [ -z "$user_id" ] && continue
+        count=$((count + 1))
+        
+        echo -e "  ${GREEN}正在生成用户 $user_id 的 Token...${NC}"
+        generate_token "$user_id"
+        
+        if [ $count -gt 1 ]; then
+            echo "    }," >> "$tmp_file"
+        fi
+        
+        echo "    {" >> "$tmp_file"
+        echo "      userId: '$user_id'," >> "$tmp_file"
+        echo "      token: '$TOKEN'," >> "$tmp_file"
+    done <<< "$USER_LIST"
+    
+    # 关闭最后一个用户
+    echo "    }" >> "$tmp_file"
+    
+    # 写入文件尾
+    cat >> "$tmp_file" << 'FOOTER'
+  ],
+};
+
+export default config;
+FOOTER
+
+    # 替换占位符
+    sed -i "s/APP_ID_PLACEHOLDER/$APP_ID/" "$tmp_file"
+    sed -i "s/ROOM_ID_PLACEHOLDER/$ROOM_ID/" "$tmp_file"
+    
+    # 复制到目标位置
+    cp "$tmp_file" "$SDK_CONFIG_FILE"
+    rm "$tmp_file"
     
     echo -e "${GREEN}SDK 配置已更新！${NC}"
+    echo -e "${GREEN}共更新了 $USER_COUNT 个用户的配置${NC}"
 }
 
 # 主流程
@@ -115,27 +161,11 @@ main() {
     echo -e "  App ID: $APP_ID"
     echo -e "  Room ID: $ROOM_ID"
     echo -e "  Expire: $EXPIRE 秒"
-    echo -e "  Users: $USER_IDS"
+    echo -e "  Users: $USER_IDS_RAW"
     echo ""
     
-    # 获取第一个用户
-    FIRST_USER=$(echo "$USER_IDS" | head -n1)
-    
-    # 生成 Token
-    TOKEN_OUTPUT=$(generate_token "$FIRST_USER")
-    TOKEN=$(echo "$TOKEN_OUTPUT" | grep "Token:" | cut -d: -f2 | tr -d ' ')
-    
-    if [ -z "$TOKEN" ]; then
-        echo -e "${RED}错误：Token 生成失败${NC}"
-        echo "$TOKEN_OUTPUT"
-        exit 1
-    fi
-    
-    echo -e "${GREEN}Token 生成成功！${NC}"
-    echo ""
-    
-    # 更新 SDK 配置
-    update_sdk_config "$FIRST_USER" "$TOKEN"
+    # 重写配置
+    rewrite_config
     
     echo ""
     echo -e "${GREEN}==================================================${NC}"
