@@ -183,7 +183,8 @@ const Meeting: React.FC<Record<string, unknown>> = () => {
 
       rtc.current
         .join((token as any) || null, roomId, userId)
-        .then(() =>
+        .then(() => {
+          console.log('[RTC] joinRoom success', { roomId, userId, token: token ? '***' : 'null' });
           rtc?.current?.createLocalStream(userId, (res: any) => {
             const { code, msg } = res;
             if (code === -1) {
@@ -193,12 +194,18 @@ const Meeting: React.FC<Record<string, unknown>> = () => {
               setMicOn(false);
               setVideoOn(false);
             }
-          })
-        )
+          });
+        })
         .catch((err: any) => {
-          console.log('err', err);
+          console.error('[RTC] joinRoom failed:', {
+            error: err,
+            errorMessage: err?.message,
+            errorCode: err?.errorCode,
+            roomId,
+            userId,
+          });
           leaveRoom(false);
-          setJoinFailReason(JSON.stringify(err));
+          setJoinFailReason(JSON.stringify(err, null, 2));
         });
     })();
   }, [roomId, userId, rtc]);

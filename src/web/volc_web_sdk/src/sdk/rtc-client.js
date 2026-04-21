@@ -60,6 +60,7 @@ export default class RtcClient {
     this.engine.off(VERTC.events.onError, this.handleEventError);
   }
   join(token, roomId, uid) {
+    console.log('[RTC] RtcClient.join called:', { roomId, uid, hasToken: !!token });
     return this.engine.joinRoom(
       token,
       roomId,
