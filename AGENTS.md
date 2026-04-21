@@ -161,9 +161,11 @@ make done TASK=N TOPIC=<主题>
 7. **等待用户确认后进入下一个**
 
 ### 4.3 提交信息格式
+提交使用中文描述详细点。 
 ```bash
 # 子任务完成
-git commit -m "feat(topic): 完成 Task N - {任务名称}
+
+git commit -m "feat(topic): 完成 Task N - {任务名称}  
 
 - 完成内容1
 - 完成内容2
