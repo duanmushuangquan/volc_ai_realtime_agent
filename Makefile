@@ -114,19 +114,14 @@ sync-all:
 cloud-status:
 	@python3 scripts/sync_to_cloud.py --check-status || curl -s http://$(CLOUD_IP):$(WEBHOOK_PORT)/webhook/git 2>/dev/null || echo "状态服务不可用"
 
-# 从云电脑拉取
+# 从云电脑拉取 (GitHub API)
 sync-pull:
-	@echo "从云电脑拉取..."
-	@scp -i $(SSH_KEY) $(CLOUD_USER)@$(CLOUD_IP):$(CLOUD_DIR)/build_status.json . 2>/dev/null || echo "拉取失败"
-	@cat build_status.json 2>/dev/null || echo "无状态文件"
+	@echo "从 GitHub 拉取..."
+	@git pull origin main
 
-# SSH 连接到云电脑
-cloud-ssh:
-	@ssh -i $(SSH_KEY) -o StrictHostKeyChecking=no $(CLOUD_USER)@$(CLOUD_IP)
-
-# 在云电脑上启动 Webhook 服务
-cloud-webhook:
-	@ssh -i $(SSH_KEY) $(CLOUD_USER)@$(CLOUD_IP) "cd $(CLOUD_DIR) && python3 scripts/cloud_build.py --webhook --port $(WEBHOOK_PORT)"
+# 注意: 云电脑不支持 SSH，以下命令需要手动在云电脑上执行
+# cloud-ssh: (不可用)
+# cloud-webhook: (需要手动在云电脑执行)
 
 # ============ 火山 SDK ============
 
