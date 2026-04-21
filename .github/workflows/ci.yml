@@ -75,13 +75,25 @@ jobs:
         run: |
           brew install cmake ninja
 
+      - name: Check for CMakeLists.txt
+        id: check_cmake
+        run: |
+          if [ -f "CMakeLists.txt" ]; then
+            echo "has_cmake=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_cmake=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Project has CMakeLists.txt: $has_cmake"
+
       - name: Configure CMake
+        if: steps.check_cmake.outputs.has_cmake == 'true'
         run: |
           mkdir -p build
           cd build
           cmake .. -G Ninja
 
       - name: Build
+        if: steps.check_cmake.outputs.has_cmake == 'true'
         run: |
           cd build
           cmake --build . --parallel
