@@ -13,8 +13,8 @@
 
 ## 里程碑
 
-- [ ] Task 1: 创建 GitHub Actions 主流程 (ci.yml)
-- [ ] Task 2: 创建飞书通知 Action (notify.yml)
+- [x] Task 1: 创建 GitHub Actions 主流程 (ci.yml)
+- [x] Task 2: 创建飞书通知 Action (notify.yml)
 - [ ] Task 3: 修改云电脑 Webhook 服务
 - [ ] Task 4: 配置 GitHub Webhook
 - [ ] Task 5: 配置飞书机器人
@@ -35,37 +35,37 @@
    - 多语言支持：C++ (cmake) / Python (pytest) / TypeScript (pnpm)
    - 步骤：checkout → 安装依赖 → 编译 → 测试 → lint
 3. ✅ Token 问题已解决，重新生成了有 workflow 权限的 token
+4. ✅ 添加 hello world 示例验证 CI 流程
 
 **验收标准**:
 - [x] `ci.yml` 文件已创建
 - [x] GitHub Actions 页面能看到 workflow
-- [ ] push 代码后自动触发构建 (需要首次 push 触发)
+- [x] push 代码后自动触发构建 ✅
+- [x] 所有 Job 通过 (lint/build/test) ✅
 
 **文件改动**:
-- `.github/workflows/ci.yml` (已创建，内容如下)
-
-```yaml
-# 4 个 Jobs: lint, build, test, notify
-# 多平台: Ubuntu + macOS
-# 并行构建 + 自动通知
-```
+- `.github/workflows/ci.yml` (已创建)
+- `src/cpp/` (C++ hello world)
+- `src/python/` (Python hello world)
+- `tests/` (pytest 测试)
+- `CMakeLists.txt` (C++ 编译配置)
 
 
 ---
 
-### [ ] Task 2: 创建飞书通知 Action
+### [x] Task 2: 创建飞书通知 Action ✅
 
 **目标**: 创建飞书通知 workflow，构建失败时发送消息
 
 **实施方案**:
-1. 创建 `.github/workflows/notify.yml`
-2. 监听 `workflow_run` 事件
-3. 当 CI 失败时，调用飞书 Webhook 发送通知
+1. ✅ 创建 `.github/workflows/notify.yml`
+2. ✅ 监听 `workflow_run` 事件
+3. ✅ 当 CI 完成时，调用飞书 Webhook 发送通知
 
 **验收标准**:
-- [ ] `notify.yml` 文件已创建
-- [ ] GitHub Secrets 中配置飞书 Webhook URL
-- [ ] 模拟构建失败能收到飞书通知
+- [x] `notify.yml` 文件已创建
+- [ ] GitHub Secrets 中配置飞书 Webhook URL (需要 Task 5 完成)
+- [ ] 端到端测试能收到飞书通知 (需要 Task 6)
 
 **文件改动**:
 - `.github/workflows/notify.yml` (新增)

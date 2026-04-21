@@ -1,0 +1,87 @@
+# 飞书通知 Action
+# 计划: docs/plan/CICD_webhook_plan.md
+
+name: Notify Feishu
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types: [completed]
+
+jobs:
+  notify:
+    name: Feishu Notification
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion != 'skipped' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get workflow info
+        run: |
+          echo "workflow_name=${{ github.event.workflow_run.name }}" >> $GITHUB_ENV
+          echo "workflow_status=${{ github.event.workflow_run.conclusion }}" >> $GITHUB_ENV
+          echo "workflow_url=${{ github.event.workflow_run.html_url }}" >> $GITHUB_ENV
+          echo "commit_sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+          echo "commit_message=${{ github.event.workflow_run.head_commit.message }}" >> $GITHUB_ENV
+
+      - name: Send Feishu notification
+        if: vars.FEISHU_WEBHOOK_URL != ''
+        run: |
+          # Determine status emoji and color
+          if [ "${{ github.event.workflow_run.conclusion }}" == "success" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_COLOR="green"
+          else
+            STATUS_EMOJI="❌"
+            STATUS_COLOR="red"
+          fi
+          
+          # Format commit message (first line only, max 100 chars)
+          COMMIT_MSG=$(echo "${{ env.commit_message }}" | head -1 | cut -c1-100)
+          
+          # Send to Feishu
+          curl -s -X POST "${{ vars.FEISHU_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "header": {
+                  "title": {
+                    "tag": "plain_text",
+                    "content": "'$STATUS_EMOJI' CI/CD '${{ env.workflow_name }}' '"${{ github.event.workflow_run.conclusion }}"'"
+                  },
+                  "template": "'$STATUS_COLOR'"
+                },
+                "elements": [
+                  {
+                    "tag": "div",
+                    "text": {
+                      "tag": "lark_md",
+                      "content": "**Commit**: `'"$COMMIT_MSG"'`\n**Branch**: '"${{ github.ref_name }}"'\n**Trigger**: '"${{ github.triggered_by }}"'"
+                    }
+                  },
+                  {
+                    "tag": "action",
+                    "actions": [
+                      {
+                        "tag": "button",
+                        "text": {
+                          "tag": "plain_text",
+                          "content": "查看详情"
+                        },
+                        "type": "primary",
+                        "url": "'${{ env.workflow_url }}'"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }'
+          echo "Feishu notification sent"
+
+      - name: Log skip notification
+        if: vars.FEISHU_WEBHOOK_URL == ''
+        run: |
+          echo "FEISHU_WEBHOOK_URL not configured, skipping notification"
+          echo "Configure it in: GitHub repo -> Settings -> Secrets and variables -> Variables"
