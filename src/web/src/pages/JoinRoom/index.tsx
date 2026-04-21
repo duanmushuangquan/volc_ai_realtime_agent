@@ -5,7 +5,8 @@
 
 import React, { FC, useContext } from 'react';
 import styled from 'styled-components';
-import { StoreValue } from 'rc-field-form/lib/interface';
+// @ts-ignore - rc-field-form types compatibility
+import { StoreValue } from 'rc-field-form';
 
 import { Input, Button, Form, Modal } from 'antd';
 import { Context } from '../../context';
@@ -78,7 +79,7 @@ const getLoginFieldRules = (
 const JoinRoom: FC<{ joinRoom: () => void }> = ({ joinRoom }) => {
   const [form] = Form.useForm<IForm>();
 
-    const { setRoomId, setUserId, userId, roomId, joinFailReason} = useContext(Context);
+  const { setRoomId, setUserId, userId, roomId, joinFailReason } = useContext(Context);
 
   const onFinish = (value: IForm) => {
     const { roomId, userId } = value;
