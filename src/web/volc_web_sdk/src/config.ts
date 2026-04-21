@@ -13,7 +13,7 @@ const config = {
   tokens: [
     {
       userId: 'user_001',
-      token: 'MzkyYzMzNzZlMTE4NTNjNGRiODY0M2E1M2Y3NjRiYjRiOWQ1NjEwY2YxMTkzNTdlMzdkNzdiNzMzM2QzMTllZjo2OWM2OTk3NzVjZjlmMDAxNzRiMGMwNjZfdGVzdF9yb29tX3VzZXJfMDAxXzE3NzczOTY4Mzg=',
+      token: '00169c699775cf9f00174b0c066RwBvo9IAA7TnaYPu8GkJAHRlc3Rfcm9vbQgAdXNlcl8wMDEGAAAAg+7waQEAg+7waQIAg+7waQMAg+7waQQAg+7waQUAg+7waSAA5eXM025pWQfX4oWuqi3m6qINzFPUk/w9pQeQxs6yt4A=',
     },
     {
       userId: 'user_002',
