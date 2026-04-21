@@ -44,6 +44,15 @@ vendor/
 *.bak
 .cache/
 
+# SSH Keys
+.ssh/id_ed25519
+.ssh/id_rsa
+!.ssh/*.pub
+
+# Cloud Config
+cloud.env
+config/cloud.env
+
 # Environment
 .env
 .env.local

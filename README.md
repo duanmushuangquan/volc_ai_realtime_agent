@@ -150,3 +150,63 @@ make new-plan TOPIC=openclaw
 ## License
 
 MIT
+
+## 云电脑同步 (Git + Webhook)
+
+### 前提条件
+
+1. **SSH 公钥配置**：将 `.ssh/id_ed25519.pub` 的内容添加到云电脑
+
+```bash
+# 在云电脑上执行
+mkdir -p ~/.ssh
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5..." >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+2. **GitHub 仓库**：确保代码已推送到 GitHub
+
+### 使用流程
+
+```bash
+# 1. 在沙箱编写代码...
+
+# 2. 推送到 GitHub 并触发云电脑编译
+make sync-all
+
+# 3. 查看编译状态
+make sync-status
+
+# 4. SSH 到云电脑调试（如需要）
+make cloud-ssh
+```
+
+### 云电脑首次设置
+
+```bash
+# 1. 在云电脑上克隆仓库（首次）
+ssh -i .ssh/id_ed25519 coze@115.190.107.107
+mkdir -p /home/coze/projects
+cd /home/coze/projects
+git clone https://github.com/your-org/volc_ai_realtime_agent.git
+
+# 2. 在云电脑上启动 Webhook 服务
+cd volc_ai_realtime_agent
+python3 scripts/cloud_build.py --webhook
+```
+
+### 命令清单
+
+| 命令 | 说明 |
+|------|------|
+| `make sync-github` | 仅推送到 GitHub |
+| `make sync-trigger` | 仅触发云电脑编译 |
+| `make sync-all` | 推送 + 触发（常用） |
+| `make sync-status` | 查看编译状态 |
+| `make cloud-ssh` | SSH 连接云电脑 |
+| `make cloud-webhook` | 启动 Webhook 服务 |
+
+## 参考链接
+
+- [火山 RTC 文档](https://www.volcengine.com/docs/6348/?lang=zh)
+- [AGENTS.md](./AGENTS.md) - 开发规范

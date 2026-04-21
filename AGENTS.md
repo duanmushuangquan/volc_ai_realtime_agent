@@ -273,3 +273,78 @@ export VOLC_TOKEN=xxx
 - 火山 RTC 文档: https://www.volcengine.com/docs/6348/
 - OpenClaw: https://github.com/tier4/openclaw
 - Fast DDS: https://fast-dds.docs.eprosima.com/
+
+---
+
+## 24. 云电脑同步规范 (Git + Webhook)
+
+### 24.1 配置信息
+
+| 配置项 | 值 | 说明 |
+|--------|-----|------|
+| **公网 IP** | `115.190.107.107` | 云电脑公网地址 |
+| **SSH 用户** | `coze` | 云电脑用户名 |
+| **SSH 端口** | `22` | 默认 SSH 端口 |
+| **工作目录** | `/home/coze/projects/volc_ai_realtime_agent` | 代码存放位置 |
+| **Webhook 端口** | `8000` | HTTP 服务端口 |
+
+### 24.2 工作流
+
+```
+Coze 沙箱                        GitHub                      云电脑
+    │                              │                          │
+    │ git push                     │                          │
+    ├─────────────────────────────→│                          │
+    │                              │ webhook POST             │
+    │                              ├────────────────────────→│
+    │                              │                          │ git pull
+    │                              │                          │ cmake build
+    │                              │                          │ make test
+    │                              │                          │
+    │ curl /status                 │                          │
+    ├←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←│                          │
+    │ {status: "success"}          │                          │
+```
+
+### 24.3 使用命令
+
+```bash
+# 1. 推送代码到 GitHub 并触发云电脑编译
+make sync-all
+
+# 2. 查看云电脑编译状态
+make sync-status
+
+# 3. SSH 连接到云电脑调试
+make cloud-ssh
+
+# 4. 在云电脑上启动 Webhook 服务（首次需要）
+make cloud-webhook
+```
+
+### 24.4 SSH 公钥配置
+
+```bash
+# 云电脑端：添加公钥
+mkdir -p ~/.ssh
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5..." >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+公钥位置: `.ssh/id_ed25519.pub`
+
+### 24.5 Python 脚本
+
+| 脚本 | 功能 | 运行环境 |
+|------|------|----------|
+| `scripts/sync_to_cloud.py` | Git 推送 + Webhook 触发 | 沙箱 |
+| `scripts/cloud_build.py` | 拉取 + 编译 + Webhook 服务 | 云电脑 |
+
+### 24.6 故障排查
+
+| 问题 | 解决方法 |
+|------|----------|
+| SSH 连接失败 | 检查公钥是否添加到云电脑 |
+| Webhook 不可用 | 在云电脑上运行 `python3 scripts/cloud_build.py --webhook` |
+| 编译失败 | SSH 到云电脑 `make cloud-ssh`，查看日志 |
+| GitHub 推送失败 | 检查 git remote 配置 |
