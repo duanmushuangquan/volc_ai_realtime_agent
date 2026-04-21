@@ -7,7 +7,7 @@ CLOUD_IP := 115.190.107.107
 CLOUD_USER := coze
 CLOUD_DIR := /home/coze/projects/volc_ai_realtime_agent
 SSH_KEY := .ssh/id_ed25519
-WEBHOOK_PORT := 8888
+WEBHOOK_PORT := 8000
 
 # 默认目标
 help:
@@ -104,7 +104,7 @@ sync-github:
 # 触发云电脑编译 (通过 HTTP Webhook)
 sync-trigger:
 	@echo "触发云电脑编译..."
-	@python3 scripts/sync_to_cloud.py --push-only 2>/dev/null || curl -s -X POST http://$(CLOUD_IP):$(WEBHOOK_PORT)/webhook/git || echo "Webhook 不可用，请在云电脑上运行: python3 scripts/cloud_build.py --webhook --port 8888"
+	@python3 scripts/sync_to_cloud.py --push-only 2>/dev/null || curl -s -X POST http://$(CLOUD_IP):$(WEBHOOK_PORT)/webhook/git || echo "Webhook 不可用，请在云电脑上运行: python3 scripts/cloud_build.py --webhook --port 8000"
 
 # 推送并触发 (完整流程)
 sync-all: 

@@ -28,7 +28,7 @@ CLOUD_CONFIG = {
     "user": "coze",
     "ssh_key": ".ssh/id_ed25519",
     "work_dir": "/home/coze/projects/volc_ai_realtime_agent",
-    "webhook_port": 8888,  # Webhook 端口
+    "webhook_port": 8000,  # Webhook 端口
 }
 
 GITHUB_REMOTE = "origin"

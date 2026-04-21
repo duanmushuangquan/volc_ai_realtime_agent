@@ -13,11 +13,11 @@ Cloud Build Script - 云电脑端编译脚本
     # 直接编译
     python3 scripts/cloud_build.py
 
-    # 启动 Webhook 服务（端口 8888）
-    python3 scripts/cloud_build.py --webhook --port 8888
+    # 启动 Webhook 服务（端口 8000）
+    python3 scripts/cloud_build.py --webhook --port 8000
 
     # 带 Secret 验证的 Webhook
-    python3 scripts/cloud_build.py --webhook --port 8888 --secret your-github-webhook-secret
+    python3 scripts/cloud_build.py --webhook --port 8000 --secret your-github-webhook-secret
 """
 
 import argparse
@@ -174,7 +174,7 @@ def main():
     parser = argparse.ArgumentParser(description="云电脑编译脚本")
     parser.add_argument("--project", default="volc_ai_realtime_agent", help="项目名称")
     parser.add_argument("--webhook", action="store_true", help="启用 Webhook 服务")
-    parser.add_argument("--port", type=int, default=8888, help="Webhook 端口（默认 8888）")
+    parser.add_argument("--port", type=int, default=8000, help="Webhook 端口（默认 8000）")
     parser.add_argument("--secret", default="", help="GitHub Webhook Secret（用于验证）")
     args = parser.parse_args()
 
@@ -293,7 +293,7 @@ class ThreadedHTTPServer(HTTPServer):
         self.build_dir = build_dir
 
 
-def start_webhook_server(port: int = 8888, secret: str = "", project_dir: Path = None, build_dir: Path = None):
+def start_webhook_server(port: int = 8000, secret: str = "", project_dir: Path = None, build_dir: Path = None):
     """启动 Webhook 服务"""
     if project_dir is None:
         project_dir = PROJECT_DIR / "volc_ai_realtime_agent"
