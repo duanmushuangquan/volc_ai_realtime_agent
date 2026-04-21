@@ -13,11 +13,11 @@ const config = {
   tokens: [
     {
       userId: 'user_001',
-      token: 'NjY4Nzk1MmI2NDNkNTU0N2NiOGY5OWNlNWU5YmRiYzA5MWI5MWNkMzMxMjA2ZmIyMzUxY2IzMjFiNGNmM2RlZDo2OWM2OTk3NzVjZjlmMDAxNzRiMGMwNjZfdGVzdF9yb29tX3VzZXJfMDAxXzE3NzczOTU0NDg=',
+      token: 'ZTIwNTNjYzRlYWFhYmZkNmI4NjlmYjNlZmM4YTUzOGE4NDkwZThlMWQ2MmQ4MjYzZTlkYzM2ZmVkMDc1Nzc0NTo2OWM2OTk3NzVjZjlmMDAxNzRiMGMwNjZfdGVzdF9yb29tX3VzZXJfMDAxXzE3NzczOTU1ODY=',
     },
     {
-      userId: 'yourUserId2',
-      token: 'yourToken2',
+      userId: 'user_002',
+      token: 'YzkyNTY3N2E3YTQ0YjhlNmVlMDE3OTU3NGE4NjM1YTA3NTJkYmE3ZTJiZGIzNDA3MjAyYTc0N2QyZWRiZmY2Nzo2OWM2OTk3NzVjZjlmMDAxNzRiMGMwNjZfdGVzdF9yb29tX3VzZXJfMDAyXzE3NzczOTU1ODY=',
     }
   ],
 };
