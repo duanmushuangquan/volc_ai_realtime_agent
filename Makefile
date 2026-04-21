@@ -7,6 +7,7 @@ CLOUD_IP := 115.190.107.107
 CLOUD_USER := coze
 CLOUD_DIR := /home/coze/projects/volc_ai_realtime_agent
 SSH_KEY := .ssh/id_ed25519
+WEBHOOK_PORT := 8888
 
 # 默认目标
 help:
@@ -103,15 +104,15 @@ sync-github:
 # 触发云电脑编译 (通过 HTTP Webhook)
 sync-trigger:
 	@echo "触发云电脑编译..."
-	@curl -s -X POST http://$(CLOUD_IP):8000/webhook/git || echo "Webhook 不可用，请在云电脑上运行: python3 scripts/cloud_build.py --webhook"
+	@python3 scripts/sync_to_cloud.py --push-only 2>/dev/null || curl -s -X POST http://$(CLOUD_IP):$(WEBHOOK_PORT)/webhook/git || echo "Webhook 不可用，请在云电脑上运行: python3 scripts/cloud_build.py --webhook --port 8888"
 
 # 推送并触发 (完整流程)
-sync-all: sync-github sync-trigger
-	@echo "完成! 云电脑正在编译..."
+sync-all: 
+	@python3 scripts/sync_to_cloud.py
 
 # 查看云电脑状态
-sync-status:
-	@curl -s http://$(CLOUD_IP):8000/status 2>/dev/null || echo "状态服务不可用"
+cloud-status:
+	@python3 scripts/sync_to_cloud.py --check-status || curl -s http://$(CLOUD_IP):$(WEBHOOK_PORT)/webhook/git 2>/dev/null || echo "状态服务不可用"
 
 # 从云电脑拉取
 sync-pull:
@@ -125,7 +126,7 @@ cloud-ssh:
 
 # 在云电脑上启动 Webhook 服务
 cloud-webhook:
-	@ssh -i $(SSH_KEY) $(CLOUD_USER)@$(CLOUD_IP) "cd $(CLOUD_DIR) && python3 scripts/cloud_build.py --webhook"
+	@ssh -i $(SSH_KEY) $(CLOUD_USER)@$(CLOUD_IP) "cd $(CLOUD_DIR) && python3 scripts/cloud_build.py --webhook --port $(WEBHOOK_PORT)"
 
 # ============ 火山 SDK ============
 

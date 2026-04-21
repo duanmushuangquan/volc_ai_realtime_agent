@@ -9,8 +9,9 @@ Cloud Sync Tool - Git + Webhook 工作流
 
 用法：
     python3 scripts/sync_to_cloud.py                    # 推送并触发编译
-    python3 scripts/sync_to_cloud.py --push-only       # 仅推送
-    python3 scripts/sync_to_cloud.py --wait-result     # 等待结果
+    python3 scripts/sync_to_cloud.py --push-only     # 仅推送
+    python3 scripts/sync_to_cloud.py --wait-result    # 等待结果
+    python3 scripts/sync_to_cloud.py --check-status   # 检查云电脑状态
 """
 
 import argparse
@@ -27,7 +28,7 @@ CLOUD_CONFIG = {
     "user": "coze",
     "ssh_key": ".ssh/id_ed25519",
     "work_dir": "/home/coze/projects/volc_ai_realtime_agent",
-    "webhook_url": "http://115.190.107.107:8000/webhook/git",  # 需要在云电脑上启动
+    "webhook_port": 8888,  # Webhook 端口
 }
 
 GITHUB_REMOTE = "origin"
@@ -59,7 +60,7 @@ def check_ssh_connection() -> bool:
         return False
 
 
-def sync_to_github() -> bool:
+def sync_to_github(auto_commit: bool = True) -> bool:
     """推送代码到 GitHub"""
     print("\n[1/3] 同步到 GitHub...")
 
@@ -69,11 +70,16 @@ def sync_to_github() -> bool:
         print("  没有需要推送的更改")
         return False
 
-    # 添加所有文件
-    run_cmd("git add -A")
+    if auto_commit:
+        # 添加所有文件
+        run_cmd("git add -A")
 
-    # 提交
-    run_cmd("git commit -m 'chore: sync from Coze sandbox'")
+        # 获取提交消息（从最新提交或自动生成）
+        result = run_cmd("git log -1 --pretty=%s", check=False)
+        message = result.stdout.strip() or "chore: sync from Coze sandbox"
+
+        # 提交
+        run_cmd(f"git commit -m '{message}'")
 
     # 推送
     result = run_cmd(f"git push {GITHUB_REMOTE} {GITHUB_BRANCH}", check=False)
@@ -85,50 +91,105 @@ def sync_to_github() -> bool:
     return True
 
 
-def trigger_webhook() -> bool:
+def trigger_webhook(secret: str = "") -> bool:
     """触发云电脑 Webhook"""
     print("\n[2/3] 触发云电脑 Webhook...")
 
+    webhook_url = f"http://{CLOUD_CONFIG['ip']}:{CLOUD_CONFIG['webhook_port']}/webhook/git"
+
     try:
+        payload = {
+            "event": "git_push",
+            "branch": GITHUB_BRANCH,
+            "timestamp": time.time()
+        }
+
+        headers = {"Content-Type": "application/json"}
+        if secret:
+            import hashlib, hmac
+            import json
+            signature = "sha1=" + hmac.new(
+                secret.encode(),
+                json.dumps(payload).encode(),
+                hashlib.sha1
+            ).hexdigest()
+            headers["X-Hub-Signature"] = signature
+
         response = requests.post(
-            CLOUD_CONFIG['webhook_url'],
-            json={"event": "git_push", "branch": GITHUB_BRANCH},
+            webhook_url,
+            json=payload,
+            headers=headers,
             timeout=10
         )
         if response.status_code == 200:
             print("  Webhook 触发成功")
             return True
         else:
-            print(f"  Webhook 返回: {response.status_code}")
+            print(f"  Webhook 返回: {response.status_code} - {response.text}")
             return False
+    except requests.exceptions.ConnectionError:
+        print(f"  Webhook 连接失败: 云电脑端口 {CLOUD_CONFIG['webhook_port']} 未开放")
+        print(f"  请确保云电脑已启动: python3 scripts/cloud_build.py --webhook")
+        return False
     except requests.exceptions.RequestException as e:
         print(f"  Webhook 触发失败: {e}")
-        print("  (云电脑需要启动 webhook 服务)")
         return False
 
 
-def wait_for_result(timeout: int = 300) -> bool:
+def check_build_status() -> dict:
+    """检查云电脑编译状态"""
+    print(f"\n检查云电脑状态...")
+
+    try:
+        url = f"http://{CLOUD_CONFIG['ip']}:{CLOUD_CONFIG['webhook_port']}/webhook/git"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            print(f"  服务状态: {data.get('status', 'unknown')}")
+            if 'build' in data:
+                build = data['build']
+                print(f"  构建状态: {build.get('status', 'unknown')}")
+                print(f"  消息: {build.get('message', '')}")
+                print(f"  进度: {build.get('progress', 0)}%")
+            return data
+        else:
+            print(f"  HTTP {response.status_code}")
+            return {}
+    except requests.exceptions.ConnectionError:
+        print(f"  无法连接到云电脑")
+        return {}
+
+
+def wait_for_result(timeout: int = 600) -> bool:
     """等待编译结果"""
     print(f"\n[3/3] 等待编译结果 (超时 {timeout}s)...")
 
     start_time = time.time()
+    last_status = None
+
     while time.time() - start_time < timeout:
         try:
-            response = requests.get(
-                f"http://{CLOUD_CONFIG['ip']}:8000/status",
-                timeout=5
-            )
+            url = f"http://{CLOUD_CONFIG['ip']}:{CLOUD_CONFIG['webhook_port']}/webhook/git"
+            response = requests.get(url, timeout=5)
+
             if response.status_code == 200:
                 data = response.json()
-                status = data.get("status", "unknown")
-                print(f"  状态: {status}")
 
-                if status == "success":
-                    print("\n  编译成功!")
-                    return True
-                elif status == "failed":
-                    print("\n  编译失败!")
-                    return False
+                if 'build' in data:
+                    build = data['build']
+                    status = build.get('status', 'unknown')
+
+                    # 状态变化时打印
+                    if status != last_status:
+                        print(f"  状态: {status} - {build.get('message', '')}")
+                        last_status = status
+
+                    if status == "success":
+                        print("\n  编译成功!")
+                        return True
+                    elif status == "failed":
+                        print(f"\n  编译失败: {build.get('message', '')}")
+                        return False
 
             time.sleep(10)
         except requests.exceptions.RequestException:
@@ -138,15 +199,42 @@ def wait_for_result(timeout: int = 300) -> bool:
     return False
 
 
+def ssh_to_cloud():
+    """SSH 连接到云电脑"""
+    print(f"\n连接到云电脑...")
+    print(f"  IP: {CLOUD_CONFIG['ip']}")
+    print(f"  用户: {CLOUD_CONFIG['user']}")
+    print(f"  工作目录: {CLOUD_CONFIG['work_dir']}")
+    print()
+    os.system(
+        f"ssh -i {CLOUD_CONFIG['ssh_key']} "
+        f"-o StrictHostKeyChecking=no "
+        f"{CLOUD_CONFIG['user']}@{CLOUD_CONFIG['ip']}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="同步代码到云电脑")
     parser.add_argument("--push-only", action="store_true", help="仅推送，不触发 webhook")
     parser.add_argument("--wait-result", action="store_true", help="等待编译结果")
+    parser.add_argument("--check-status", action="store_true", help="检查云电脑状态")
+    parser.add_argument("--ssh", action="store_true", help="SSH 连接到云电脑")
+    parser.add_argument("--commit-msg", type=str, default="", help="自定义提交消息")
     args = parser.parse_args()
 
     print("=" * 50)
     print("Cloud Sync Tool - Git + Webhook")
     print("=" * 50)
+
+    # 检查状态模式
+    if args.check_status:
+        check_build_status()
+        return
+
+    # SSH 模式
+    if args.ssh:
+        ssh_to_cloud()
+        return
 
     # 检查 SSH 连接
     print("\n[0/3] 检查 SSH 连接...")
@@ -154,14 +242,20 @@ def main():
         print("  SSH 连接正常")
     else:
         print("  SSH 连接失败，请检查公钥是否添加到云电脑")
-        print(f"  公钥: .ssh/id_ed25519.pub")
+        print(f"  公钥文件: .ssh/id_ed25519.pub")
+        print("\n  添加公钥到云电脑:")
+        print(f"  ssh coze@115.190.107.107 'mkdir -p ~/.ssh && echo \"$(cat .ssh/id_ed25519.pub)\" >> ~/.ssh/authorized_keys'")
         sys.exit(1)
 
     # 推送到 GitHub
-    pushed = sync_to_github()
+    pushed = sync_to_github(auto_commit=not args.commit_msg)
+    if args.commit_msg:
+        run_cmd("git add -A")
+        run_cmd(f"git commit -m '{args.commit_msg}'")
+        run_cmd(f"git push {GITHUB_REMOTE} {GITHUB_BRANCH}")
 
-    if args.push_only:
-        print("\n[Done] 仅推送模式，跳过 Webhook")
+    if args.push_only or not pushed:
+        print("\n[Done] 推送模式完成")
         return
 
     # 触发 Webhook
@@ -169,7 +263,7 @@ def main():
 
     if not webhook_ok:
         print("\n[Warn] Webhook 不可用，请手动在云电脑上执行:")
-        print(f"  cd {CLOUD_CONFIG['work_dir']} && git pull")
+        print(f"  cd {CLOUD_CONFIG['work_dir']} && git pull && python3 scripts/cloud_build.py")
         return
 
     # 等待结果
@@ -177,7 +271,9 @@ def main():
         if not wait_for_result():
             sys.exit(1)
     else:
-        print("\n[Done] 请在云电脑上查看编译结果")
+        print("\n[Done] Webhook 已触发，请在云电脑查看编译结果")
+        print(f"  查看状态: make cloud-status")
+        print(f"  SSH 连接: make cloud-ssh")
 
 
 if __name__ == "__main__":
