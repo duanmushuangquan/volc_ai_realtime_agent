@@ -168,6 +168,8 @@ jobs:
 
       - name: Run Python tests
         if: steps.check_python_tests.outputs.has_tests == 'true'
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest tests/unit -v --cov=src.python --cov-report=term-missing || pytest tests/unit -v
 
