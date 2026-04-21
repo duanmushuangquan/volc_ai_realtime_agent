@@ -8,12 +8,12 @@
  */
 
 const config = {
-  appId: 'yourAppId',
-  roomId: 'yourRoomId',
+  appId: '69c699775cf9f00174b0c066',
+  roomId: 'test_room',
   tokens: [
     {
-      userId: 'yourUserId1',
-      token: 'yourToken1',
+      userId: 'user_001',
+      token: 'NjY4Nzk1MmI2NDNkNTU0N2NiOGY5OWNlNWU5YmRiYzA5MWI5MWNkMzMxMjA2ZmIyMzUxY2IzMjFiNGNmM2RlZDo2OWM2OTk3NzVjZjlmMDAxNzRiMGMwNjZfdGVzdF9yb29tX3VzZXJfMDAxXzE3NzczOTU0NDg=',
     },
     {
       userId: 'yourUserId2',
