@@ -1,142 +1,139 @@
-# CICD_webhook_plan 实施计划
+# CICD_webhook 实施计划
 
 ## 背景
-基于 CICD_webhook 调研，需要打通"沙箱写代码 → GitHub → 云电脑自动编译"的流程。提升开发效率，减少手动操作。
+
+基于 CICD_webhook 调研，需要打通"沙箱写代码 → GitHub → 云电脑自动编译 → 通知结果"的完整流程。
 
 ## 阶段目标
-1. 配置 GitHub Actions 实现自动编译
-2. 配置云电脑 Webhook 实现双向同步
-3. 实现编译结果通知
+
+1. ✅ GitHub Actions CI 配置
+2. ✅ 云电脑 Webhook 服务（端口 8888）
+3. ✅ 飞书 + 邮件通知
+4. ✅ 多语言编译支持（C++/Python/TypeScript）
 
 ## 里程碑
-- [ ] GitHub Actions CI 配置完成
-- [ ] 云电脑 Webhook 服务配置完成
-- [ ] 推送代码后自动编译验证
-- [ ] 通知机制配置（待定）
 
----
-
-## 待确认项（调研问题回答）
-
-> 请回答 research 文档中的问题，确认后更新此处
-
-| 问题 | 选项 | 说明 |
-|------|------|------|
-| 实现范围 | A/B | 待确认 |
-| 通知方式 | A/B/C/D | 待确认 |
-| Webhook 端口 | 8000/其他 | 待确认 |
-| 编译任务 | A/B | 待确认 |
+- [ ] Task 1: 创建 GitHub Actions 主流程 (ci.yml)
+- [ ] Task 2: 创建飞书通知 Action (notify.yml)
+- [ ] Task 3: 修改云电脑 Webhook 服务
+- [ ] Task 4: 配置 GitHub Webhook
+- [ ] Task 5: 配置飞书机器人
+- [ ] Task 6: 端到端测试
 
 ---
 
 ## 子任务清单
 
-### [ ] Task 1: 配置 GitHub Personal Access Token
-**目标**: 获取 GitHub 权限，用于 Webhook 触发
+### [ ] Task 1: 创建 GitHub Actions 主流程
+
+**目标**: 创建 `.github/workflows/ci.yml`，实现多语言编译
 
 **实施方案**:
-1. 在 GitHub Settings → Developer settings → Personal access tokens
-2. 创建新 Token (classic)
-3. 勾选 `repo` (完全控制仓库)
-4. 保存 Token
+1. 创建 `.github/workflows/` 目录
+2. 创建 `ci.yml`：
+   - 触发条件：push/PR 到 main
+   - 多语言支持：C++ (cmake) / Python (pytest) / TypeScript (pnpm)
+   - 步骤：checkout → 安装依赖 → 编译 → 测试 → lint
 
 **验收标准**:
-- [ ] 获取到 Token
-- [ ] Token 已配置到沙箱环境
+- [ ] `ci.yml` 文件已创建
+- [ ] GitHub Actions 页面能看到 workflow
+- [ ] push 代码后自动触发构建
 
 **文件改动**:
-- 无
+- `.github/workflows/ci.yml` (新增)
 
 ---
 
-### [ ] Task 2: 创建 GitHub Actions Workflow
-**目标**: 实现代码 push 后自动编译
+### [ ] Task 2: 创建飞书通知 Action
+
+**目标**: 创建飞书通知 workflow，构建失败时发送消息
 
 **实施方案**:
-1. 创建 `.github/workflows/build.yml`
-2. 配置触发条件 (push/pull_request)
-3. 配置编译步骤：
-   - checkout 代码
-   - 安装依赖 (cmake, gcc)
-   - 编译项目
-   - 运行测试
+1. 创建 `.github/workflows/notify.yml`
+2. 监听 `workflow_run` 事件
+3. 当 CI 失败时，调用飞书 Webhook 发送通知
 
 **验收标准**:
-- [ ] `.github/workflows/build.yml` 已创建
-- [ ] push 代码后 GitHub Actions 自动运行
-- [ ] 编译状态可在 GitHub 仓库看到
+- [ ] `notify.yml` 文件已创建
+- [ ] GitHub Secrets 中配置飞书 Webhook URL
+- [ ] 模拟构建失败能收到飞书通知
 
 **文件改动**:
-- `.github/workflows/build.yml` (新增)
+- `.github/workflows/notify.yml` (新增)
 
 ---
 
-### [ ] Task 3: 配置云电脑 Webhook 服务
-**目标**: 云电脑能接收 GitHub Webhook 通知
+### [ ] Task 3: 修改云电脑 Webhook 服务
+
+**目标**: 更新 `cloud_build.py`，支持端口 8888 和飞书通知
 
 **实施方案**:
-1. 在云电脑上克隆项目（如未克隆）
-2. 配置防火墙开放端口
-3. 启动 Webhook 服务：
-   ```bash
-   python3 scripts/cloud_build.py --webhook --port 8000
-   ```
-4. 在 GitHub 仓库设置 Webhook：
-   - Payload URL: `http://115.190.107.107:8000/webhook`
-   - Content type: `application/json`
-   - Secret: (设置密码)
-   - Events: push events
+1. 修改监听端口为 8888
+2. 添加 GitHub Secret 验证
+3. 添加飞书通知函数
+4. 添加日志记录
 
 **验收标准**:
-- [ ] 云电脑端口 8000 可访问
-- [ ] `cloud_build.py --webhook` 正常运行
-- [ ] GitHub Webhook 配置成功
-- [ ] GitHub "Test" 按钮能收到响应
+- [ ] `cloud_build.py` 支持 `--port 8888`
+- [ ] 支持 `--secret` 参数验证
+- [ ] 支持 `--feishu-webhook` 飞书通知
 
 **文件改动**:
-- 无
+- `scripts/cloud_build.py` (修改)
 
 ---
 
-### [ ] Task 4: 打通完整流程测试
-**目标**: 验证"沙箱 → GitHub → 云电脑"完整链路
+### [ ] Task 4: 配置 GitHub Webhook
+
+**目标**: 在 GitHub 仓库设置 Webhook，指向云电脑
 
 **实施方案**:
-1. 在沙箱修改一个简单的测试文件
-2. 执行 `make sync-all`
-3. 验证：
-   - 代码推送到 GitHub
-   - GitHub Actions 自动编译
-   - 云电脑收到 Webhook 并执行编译
-4. 修复中间可能出现的问题
+1. GitHub → Settings → Webhooks → Add webhook
+2. Payload URL: `http://115.190.107.107:8888/webhook`
+3. Content type: `application/json`
+4. Secret: 设置与 `cloud_build.py --secret` 相同的密码
+5. Events: Just the push event
+6. Add webhook
 
 **验收标准**:
-- [ ] `make sync-all` 成功
-- [ ] GitHub Actions 显示编译状态
+- [ ] Webhook 配置成功
+- [ ] 点击 "Test" 能收到请求
+- [ ] 云电脑能打印接收日志
+
+---
+
+### [ ] Task 5: 配置飞书机器人
+
+**目标**: 获取飞书群机器人 Webhook URL
+
+**实施方案**:
+1. 在飞书群中添加自定义机器人
+2. 复制 Webhook URL
+3. 配置到 GitHub Secrets
+
+**验收标准**:
+- [ ] 获取到飞书 Webhook URL
+- [ ] Webhook URL 已配置到 GitHub Secrets (FEISHU_WEBHOOK)
+
+---
+
+### [ ] Task 6: 端到端测试
+
+**目标**: 验证完整流程
+
+**实施方案**:
+1. 在沙箱修改代码并 push
+2. GitHub Actions 自动编译
+3. 云电脑 Webhook 收到通知
+4. 收到飞书通知
+5. 验证整个链路
+
+**验收标准**:
+- [ ] 代码 push 后 GitHub Actions 运行
 - [ ] 云电脑 Webhook 收到通知
-- [ ] 云电脑执行编译（如果配置）
-
-**文件改动**:
-- 根据测试情况可能调整脚本
-
----
-
-### [ ] Task 5: 配置通知机制（可选）
-**目标**: 编译完成后自动通知
-
-**实施方案**:
-1. 根据选择的通知方式配置：
-   - 邮件：GitHub Actions 自带
-   - 飞书：配置飞书机器人 Webhook
-   - 其他：根据选择实现
-2. 在 GitHub Actions 添加通知步骤
-
-**验收标准**:
-- [ ] 编译完成后收到通知
-- [ ] 通知包含编译结果（成功/失败）
-
-**文件改动**:
-- `.github/workflows/build.yml` (更新)
+- [ ] 飞书收到构建结果通知
+- [ ] 完整日志可查
 
 ---
 
@@ -148,15 +145,26 @@
 
 ---
 
-## 命令清单
+## 模板命令
 
+### 创建新调研
 ```bash
-# 沙箱端
-make sync-all         # 推送到 GitHub 并触发云电脑
-make sync-status      # 查看编译状态
+make new-research TOPIC=<主题>
+```
 
-# 云电脑端
-python3 scripts/cloud_build.py --webhook --port 8000  # 启动 Webhook 服务
+### 创建新计划
+```bash
+make new-plan TOPIC=<主题>
+```
+
+### 查看计划进度
+```bash
+make show-plan TOPIC=CICD_webhook
+```
+
+### 标记任务完成
+```bash
+make done TASK=N TOPIC=CICD_webhook
 ```
 
 ---

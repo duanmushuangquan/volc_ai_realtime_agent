@@ -3,7 +3,19 @@
 ## 调研信息
 - 调研时间：2024-04-21
 - 调研人：Coze Agent
-- 状态：进行中
+- 状态：✅ 已确定需求
+
+---
+
+## 用户需求确认
+
+| 问题 | 回答 | 说明 |
+|------|------|------|
+| 实现范围 | **B. 完整版** | 自动测试 + 多平台编译 + 通知 |
+| 通知方式 | **A + C** | 邮件（GitHub自带）+ 飞书机器人 |
+| Webhook 端口 | **8888** | 云电脑监听端口 |
+| 编译任务 | **B. 完整流程** | cmake build + test + lint |
+| 未来扩展 | **语言无关** | 需支持多语言（C++/Python/TypeScript） |
 
 ---
 
@@ -262,20 +274,123 @@ python3 scripts/cloud_build.py --webhook --secret "你的密码"
 
 ---
 
-## 七、下一步
+## 七、用户需求确认
 
-请回答问题 1-4，我将：
-1. 完善 `docs/plan/CICD_webhook_plan.md`
-2. 生成对应的脚本和配置文件
-3. 提供具体的操作步骤
+### 7.1 完整版方案设计
+
+根据用户选择，设计如下架构：
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CI/CD 完整架构                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│   Coze 沙箱                    GitHub                      云电脑   │
+│       │                          │                          │         │
+│       │ make sync-all           │                          │         │
+│       ├─────────────────────────→│                          │         │
+│       │                          │                          │         │
+│       │                   ┌──────┴──────┐                   │         │
+│       │                   │ GitHub Actions│                   │         │
+│       │                   │  (自动编译)  │                   │         │
+│       │                   └──────┬──────┘                   │         │
+│       │                          │                          │         │
+│       │                   webhook POST                      │         │
+│       │                   ┌──────┴──────┐                   │         │
+│       │                   │  飞书通知   │                   │         │
+│       │                   │  邮件通知   │                   │         │
+│       │                   └─────────────┘                   │         │
+│       │                          │      │                  │         │
+│       │                          │      └─────────────────→│         │
+│       │                          │                         │ git pull │
+│       │                          │                         │ cmake   │
+│       │                          │                         │ test    │
+│       │                          │                         │ lint    │
+│       │                          │                         │         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 7.2 飞书机器人配置
+
+**获取飞书 Webhook URL 步骤**：
+
+1. 打开飞书 App
+2. 进入群聊 → 设置 → 群机器人 → 添加机器人
+3. 选择「自定义机器人」
+4. 填写名称，点击添加
+5. **复制 Webhook URL**（格式：`https://open.feishu.cn/open-apis/bot/v2/hook/xxx`）
+
+### 7.3 多语言编译支持设计
+
+为支持未来扩展，设计语言无关的编译配置：
+
+```yaml
+# .ci/config.yaml
+languages:
+  cpp:
+    build: cmake -B build && cmake --build build
+    test: ctest --output-on-failure
+    lint: make lint
+  python:
+    build: pip install -e .
+    test: pytest tests/
+    lint: pylint src/
+  typescript:
+    build: pnpm install && pnpm build
+    test: pnpm test
+    lint: pnpm lint
+```
+
+### 7.4 通知矩阵
+
+| 触发条件 | GitHub 邮件 | 飞书通知 |
+|----------|-------------|----------|
+| Push 到 main | ✅ 自动 | ✅ 可选 |
+| PR 创建 | ✅ 自动 | ✅ 可选 |
+| 构建成功 | ✅ 自动 | ✅ 可选 |
+| 构建失败 | ✅ 自动 | ✅ 必须 |
+| 测试失败 | ✅ 自动 | ✅ 必须 |
 
 ---
 
-## 相关链接
+## 八、具体实施步骤
 
-- [GitHub Actions 文档](https://docs.github.com/en/actions)
-- [Webhook 概念](https://docs.github.com/en/webhooks)
-- [已有脚本位置](./scripts/sync_to_cloud.py)
+### Step 1: 创建 GitHub Actions 配置
+- 创建 `.github/workflows/` 目录
+- 创建 `ci.yml` 主流程
+- 创建 `notify.yml` 飞书通知
+
+### Step 2: 创建云电脑 Webhook 服务
+- 修改 `cloud_build.py` 监听端口 8888
+- 添加飞书通知函数
+- 添加 GitHub Secret 验证
+
+### Step 3: 配置 GitHub Webhook
+- Settings → Webhooks → Add webhook
+- Payload URL: `http://115.190.107.107:8888/webhook`
+- Secret: 设置密码
+
+### Step 4: 配置飞书机器人
+- 获取飞书群机器人 Webhook URL
+- 保存到 GitHub Secrets
+
+---
+
+## 九、下一步
+
+请回答以下问题确认细节：
+
+### 问题 5：飞书机器人
+
+你已经有飞书机器人 Webhook URL 了吗？
+- **A. 有**：请提供 URL
+- **B. 没有**：需要先创建飞书群并添加机器人
+
+### 问题 6：GitHub Secrets
+
+是否需要将敏感信息（飞书 Webhook、SSH 密钥）存到 GitHub Secrets？
+- **A. 需要**：我来生成配置
+- **B. 暂不需要**：先用明文测试
 
 ---
 
