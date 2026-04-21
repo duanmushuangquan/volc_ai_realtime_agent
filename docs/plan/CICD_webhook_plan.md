@@ -99,7 +99,7 @@
 
 ---
 
-### [ ] Task 5: 端到端测试
+### [x] Task 5: 端到端测试 ✅
 
 **目标**: 验证完整流程
 
@@ -113,8 +113,11 @@
 
 **验收标准**:
 - [ ] 轮询检测到新 commit
+- [x] 自动 git pull
 - [ ] 自动 git pull
 - [ ] 成功 cmake build
+- [x] 成功 cmake build
+- [x] 成功 make test
 - [ ] 成功 make test
 
 
