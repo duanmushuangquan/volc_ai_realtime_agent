@@ -7,10 +7,13 @@ echo "=========================================="
 echo "  运行测试"
 echo "=========================================="
 
+# 设置 PYTHONPATH 以支持 src 模块导入
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src/python"
+
 # 检测测试系统
 if [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
     echo "检测到 Python 测试..."
-    python -m pytest -v
+    python -m pytest -v tests/
     
 elif [ -f "CMakeLists.txt" ]; then
     echo "检测到 C++ 测试..."
