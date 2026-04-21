@@ -49,6 +49,9 @@ vendor/
 .ssh/id_rsa
 !.ssh/*.pub
 
+# Token Config (敏感信息)
+config/token.conf
+
 # Cloud Config
 cloud.env
 config/cloud.env

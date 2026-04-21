@@ -1,0 +1,17 @@
+# 火山 RTC Token 配置文件
+# 注意：此文件包含敏感信息，请勿提交到 Git
+
+[volc]
+app_id = "你的AppId"
+app_key = "你的AppKey"
+room_id = "test_room"
+
+[users]
+# 支持多用户配置
+user_ids = ["user_001", "user_002"]
+
+[options]
+# Token 有效期（秒）
+# 最大支持值：30 天 = 2592000 秒
+# 安全考虑建议不超过 7 天 = 604800 秒
+expire = 604800
