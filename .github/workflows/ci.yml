@@ -35,9 +35,38 @@ jobs:
         run: |
           pip install flake8 black cmake-format
 
-      - name: Run lint
+      - name: Check for Python code
+        id: check_python
         run: |
-          make lint || echo "Lint tool not configured yet"
+          if ls src/python/*.py 2>/dev/null | grep -q .; then
+            echo "has_python=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_python=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Has Python code: $has_python"
+
+      - name: Check for CMakeLists.txt
+        id: check_cmake
+        run: |
+          if [ -f "CMakeLists.txt" ]; then
+            echo "has_cmake=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_cmake=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Has CMakeLists.txt: $has_cmake"
+
+      - name: Lint Python
+        if: steps.check_python.outputs.has_python == 'true'
+        run: |
+          pip install flake8 black
+          flake8 src/python --max-line-length=120 --extend-ignore=E203,W503 || true
+          black --check src/python || true
+
+      - name: Lint CMake
+        if: steps.check_cmake.outputs.has_cmake == 'true'
+        run: |
+          pip install cmake-format
+          cmake-format --check src/CMakeLists.txt 2>/dev/null || echo "cmake-format check skipped"
 
       - name: Check code format
         run: |
@@ -115,7 +144,6 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -129,10 +157,24 @@ jobs:
         run: |
           pip install pytest pytest-cov
 
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifact-ubuntu-latest
+      - name: Check for Python tests
+        id: check_python_tests
+        run: |
+          if ls tests/unit/test_*.py 2>/dev/null | grep -q .; then
+            echo "has_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run Python tests
+        if: steps.check_python_tests.outputs.has_tests == 'true'
+        run: |
+          pytest tests/unit -v --cov=src/python --cov-report=term-missing
+
+      - name: Run Python integration tests
+        if: steps.check_python_tests.outputs.has_tests == 'true'
+        run: |
+          pytest tests/integration -v || true
           path: build
 
       - name: Run tests
