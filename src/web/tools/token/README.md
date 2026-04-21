@@ -15,7 +15,7 @@
 #### 命令行参数
 
 ```bash
-cd web/tools/token
+cd src/web/tools/token
 
 # 使用命令行参数
 python3 token_generator.py --app-id 123456 --app-key abc123 --room-id test --user-id user1
