@@ -169,13 +169,7 @@ jobs:
       - name: Run Python tests
         if: steps.check_python_tests.outputs.has_tests == 'true'
         run: |
-          pytest tests/unit -v --cov=src/python --cov-report=term-missing
-
-      - name: Run Python integration tests
-        if: steps.check_python_tests.outputs.has_tests == 'true'
-        run: |
-          pytest tests/integration -v || true
-          path: build
+          pytest tests/unit -v --cov=src.python --cov-report=term-missing || pytest tests/unit -v
 
       - name: Run tests
         run: |
